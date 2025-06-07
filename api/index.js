@@ -4,9 +4,26 @@ const config = require('../src/config');
 
 const app = express();
 
-// Configuração básica
-app.use(cors(config.cors));
+// Configuração do CORS
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Middleware para OPTIONS requests
+app.options('*', cors());
+
 app.use(express.json());
+
+// Middleware para verificar se a requisição é OPTIONS
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Carrega as rotas existentes
 app.use('/api/auth', require('../src/routes/auth'));
