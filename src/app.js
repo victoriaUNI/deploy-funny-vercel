@@ -1,8 +1,15 @@
 const express = require('express');
 const app = express();
 const sequelize = require('./database');
+const cors = require('cors');
 
-app.use(cors());
+// Configuração do CORS
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 const Crianca = require('./models/Crianca');
@@ -23,20 +30,23 @@ app.use('/responsaveis', require('./routes/responsaveis'));
 const Usuario = require('./models/Usuario');
 app.use('/auth', require('./routes/auth'));
 
-// Health check endpoint
 app.get('/', (req, res) => {
-  res.status(200).json({ message: 'API is running' });
+  res.json({ message: '🚀 API está funcionando!' });
 });
 
-// Error handling middleware
+// Middleware de tratamento de erros
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Conexão com banco
+sequelize.authenticate()
+  .then(() => {
+    console.log('✅ Conexão com o PostgreSQL estabelecida!');
+    return sequelize.sync();
+  })
+  .then(() => console.log('📦 Tabelas sincronizadas com sucesso!'))
+  .catch(err => console.error('❌ Erro ao conectar ao banco:', err));
 
 module.exports = app;
