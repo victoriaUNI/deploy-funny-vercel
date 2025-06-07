@@ -12,6 +12,14 @@ app.use(cors({
 
 app.use(express.json());
 
+// Middleware para tratar erros de JSON inválido
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'JSON inválido' });
+  }
+  next();
+});
+
 const Crianca = require('./models/Crianca');
 app.use('/criancas', require('./routes/criancas'));
 
@@ -36,17 +44,32 @@ app.get('/', (req, res) => {
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Erro interno do servidor' });
+  console.error('Erro na aplicação:', err);
+  res.status(500).json({ 
+    error: 'Erro interno do servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-// Conexão com banco
-sequelize.authenticate()
-  .then(() => {
+// Função para inicializar o banco de dados
+const initializeDatabase = async () => {
+  try {
+    await sequelize.authenticate();
     console.log('✅ Conexão com o PostgreSQL estabelecida!');
-    return sequelize.sync();
-  })
-  .then(() => console.log('📦 Tabelas sincronizadas com sucesso!'))
-  .catch(err => console.error('❌ Erro ao conectar ao banco:', err));
+    
+    // Em produção, não vamos sincronizar automaticamente para evitar alterações não intencionais
+    if (process.env.NODE_ENV !== 'production') {
+      await sequelize.sync();
+      console.log('📦 Tabelas sincronizadas com sucesso!');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao conectar ao banco:', error);
+    // Não vamos derrubar o servidor em caso de erro de conexão
+    // para permitir que a Vercel continue tentando
+  }
+};
+
+// Inicializa o banco de dados
+initializeDatabase();
 
 module.exports = app;
