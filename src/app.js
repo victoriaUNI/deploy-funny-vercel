@@ -27,7 +27,6 @@ app.use(async (req, res, next) => {
   }
 });
 
-
 app.use(express.json());
 
 const Crianca = require('./models/Crianca');
@@ -48,11 +47,8 @@ app.use('/responsaveis', require('./routes/responsaveis'));
 const Usuario = require('./models/Usuario');
 app.use('/auth', require('./routes/auth'));
 
-
 app.get('/', (req, res) => {
   res.send('🚀 API está funcionando!');
 });
-
-
 
 module.exports = app;
