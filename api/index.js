@@ -8,30 +8,23 @@ const app = express();
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
   credentials: true
 }));
 
 // Middleware para OPTIONS requests
 app.options('*', cors());
 
+// Parse JSON payloads
 app.use(express.json());
 
-// Middleware para verificar se a requisição é OPTIONS
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
-
-// Carrega as rotas existentes
-app.use('/api/auth', require('../src/routes/auth'));
-app.use('/api/criancas', require('../src/routes/criancas'));
-app.use('/api/diagnosticos', require('../src/routes/diagnosticos'));
-app.use('/api/atividades', require('../src/routes/atividades'));
-app.use('/api/progresso', require('../src/routes/progresso'));
-app.use('/api/responsaveis', require('../src/routes/responsaveis'));
+// Carrega as rotas existentes sem o prefixo /api
+app.use('/auth', require('../src/routes/auth'));
+app.use('/criancas', require('../src/routes/criancas'));
+app.use('/diagnosticos', require('../src/routes/diagnosticos'));
+app.use('/atividades', require('../src/routes/atividades'));
+app.use('/progresso', require('../src/routes/progresso'));
+app.use('/responsaveis', require('../src/routes/responsaveis'));
 
 // Rota de healthcheck
 app.get('/', async (req, res) => {
@@ -45,12 +38,12 @@ app.get('/', async (req, res) => {
       database: 'conectado',
       timestamp: new Date().toISOString(),
       endpoints: [
-        '/api/auth',
-        '/api/criancas',
-        '/api/diagnosticos',
-        '/api/atividades',
-        '/api/progresso',
-        '/api/responsaveis'
+        '/auth',
+        '/criancas',
+        '/diagnosticos',
+        '/atividades',
+        '/progresso',
+        '/responsaveis'
       ]
     });
   } catch (error) {
@@ -71,12 +64,12 @@ app.use((req, res) => {
     path: req.path,
     method: req.method,
     availableEndpoints: [
-      '/api/auth',
-      '/api/criancas',
-      '/api/diagnosticos',
-      '/api/atividades',
-      '/api/progresso',
-      '/api/responsaveis'
+      '/auth',
+      '/criancas',
+      '/diagnosticos',
+      '/atividades',
+      '/progresso',
+      '/responsaveis'
     ]
   });
 });
