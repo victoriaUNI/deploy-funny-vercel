@@ -1,16 +1,12 @@
 const express = require('express');
-const app = express();
-const sequelize = require('./database');
 const cors = require('cors');
-const models = require('./models');
+const config = require('./config');
+
+// Inicializa o express
+const app = express();
 
 // Configuração do CORS
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+app.use(cors(config.cors));
 
 // Parse JSON payloads
 app.use(express.json());
@@ -23,9 +19,6 @@ app.use((err, req, res, next) => {
   next();
 });
 
-// Inicializa os modelos
-models.initializeModels();
-
 // Carregamento das rotas
 app.use('/criancas', require('./routes/criancas'));
 app.use('/diagnosticos', require('./routes/diagnosticos'));
@@ -37,15 +30,15 @@ app.use('/auth', require('./routes/auth'));
 // Rota de healthcheck
 app.get('/', async (req, res) => {
   try {
-    // Testa a conexão com o banco
-    await sequelize.authenticate();
+    const db = require('./database');
+    await db.authenticate();
     
     res.json({ 
       status: 'ok',
       message: '🚀 API está funcionando!',
       database: 'conectado',
       timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV
+      env: config.app.env
     });
   } catch (error) {
     console.error('Erro no healthcheck:', error);
@@ -54,7 +47,7 @@ app.get('/', async (req, res) => {
       message: '🚨 API está com problemas!',
       database: 'desconectado',
       timestamp: new Date().toISOString(),
-      env: process.env.NODE_ENV
+      env: config.app.env
     });
   }
 });
@@ -72,13 +65,13 @@ app.use((err, req, res, next) => {
   if (err.name && err.name.startsWith('Sequelize')) {
     return res.status(503).json({
       error: 'Erro de banco de dados',
-      message: process.env.NODE_ENV === 'development' ? err.message : 'Erro ao acessar o banco de dados'
+      message: config.app.env === 'development' ? err.message : 'Erro ao acessar o banco de dados'
     });
   }
   
   res.status(500).json({ 
     error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro interno'
+    message: config.app.env === 'development' ? err.message : 'Ocorreu um erro interno'
   });
 });
 

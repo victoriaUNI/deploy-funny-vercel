@@ -1,11 +1,10 @@
-require('dotenv').config();
 const app = require('./app');
+const config = require('./config');
 
 // Em desenvolvimento, inicia o servidor
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+if (config.app.env !== 'production') {
+  app.listen(config.app.port, () => {
+    console.log(`Servidor rodando na porta ${config.app.port}`);
   });
 }
 
