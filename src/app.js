@@ -18,9 +18,15 @@ async function connectDB() {
 }
 
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('❌ Erro no middleware de conexão:', err);
+    res.status(500).send('Erro interno ao conectar ao banco de dados.');
+  }
 });
+
 
 app.use(express.json());
 
