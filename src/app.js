@@ -2,6 +2,26 @@ const express = require('express');
 const app = express();
 const sequelize = require('./database');
 
+let isDbConnected = false;
+
+async function connectDB() {
+  if (!isDbConnected) {
+    try {
+      await sequelize.authenticate();
+      await sequelize.sync();
+      console.log('✅ Banco conectado e sincronizado!');
+      isDbConnected = true;
+    } catch (err) {
+      console.error('❌ Erro ao conectar ao banco:', err);
+    }
+  }
+}
+
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
 app.use(express.json());
 
 const Crianca = require('./models/Crianca');
@@ -27,13 +47,6 @@ app.get('/', (req, res) => {
   res.send('🚀 API está funcionando!');
 });
 
-// Conexão com banco
-sequelize.authenticate()
-  .then(() => {
-    console.log('✅ Conexão com o PostgreSQL estabelecida!');
-    return sequelize.sync();
-  })
-  .then(() => console.log('📦 Tabelas sincronizadas com sucesso!'))
-  .catch(err => console.error('❌ Erro ao conectar ao banco:', err));
+
 
 module.exports = app;
