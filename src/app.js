@@ -2,31 +2,7 @@ const express = require('express');
 const app = express();
 const sequelize = require('./database');
 
-let isDbConnected = false;
-
-async function connectDB() {
-  if (!isDbConnected) {
-    try {
-      await sequelize.authenticate();
-      await sequelize.sync();
-      console.log('✅ Banco conectado e sincronizado!');
-      isDbConnected = true;
-    } catch (err) {
-      console.error('❌ Erro ao conectar ao banco:', err);
-    }
-  }
-}
-
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    console.error('❌ Erro no middleware de conexão:', err);
-    res.status(500).send('Erro interno ao conectar ao banco de dados.');
-  }
-});
-
+app.use(cors());
 app.use(express.json());
 
 const Crianca = require('./models/Crianca');
@@ -47,8 +23,20 @@ app.use('/responsaveis', require('./routes/responsaveis'));
 const Usuario = require('./models/Usuario');
 app.use('/auth', require('./routes/auth'));
 
+// Health check endpoint
 app.get('/', (req, res) => {
-  res.send('🚀 API está funcionando!');
+  res.status(200).json({ message: 'API is running' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 module.exports = app;
