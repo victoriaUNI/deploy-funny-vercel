@@ -8,7 +8,8 @@ const path = require('path');
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -40,12 +41,27 @@ app.use('/responsaveis', require('./routes/responsaveis'));
 app.use('/auth', require('./routes/auth'));
 
 // Rota de healthcheck
-app.get('/', (req, res) => {
-  res.json({ 
-    message: '🚀 API está funcionando!',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
-  });
+app.get('/', async (req, res) => {
+  try {
+    // Testa a conexão com o banco
+    await sequelize.authenticate();
+    
+    res.json({ 
+      status: 'ok',
+      message: '🚀 API está funcionando!',
+      database: 'conectado',
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      message: '🚨 API está com problemas!',
+      database: 'desconectado',
+      timestamp: new Date().toISOString(),
+      env: process.env.NODE_ENV
+    });
+  }
 });
 
 // Middleware de tratamento de erros
@@ -53,48 +69,25 @@ app.use((err, req, res, next) => {
   console.error('Erro na aplicação:', err);
   
   // Se for um erro do Sequelize, retorna uma mensagem mais amigável
-  if (err.name === 'SequelizeConnectionError') {
+  if (err.name && err.name.startsWith('Sequelize')) {
     return res.status(503).json({
-      error: 'Erro de conexão com o banco de dados',
-      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+      error: 'Erro de banco de dados',
+      message: process.env.NODE_ENV === 'development' ? err.message : 'Erro ao acessar o banco de dados'
     });
   }
   
   res.status(500).json({ 
     error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro interno'
   });
 });
 
-// Função para inicializar o banco de dados
-const initializeDatabase = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Conexão com o PostgreSQL estabelecida!');
-    
-    // Em produção, não vamos sincronizar automaticamente
-    if (process.env.NODE_ENV !== 'production') {
-      await sequelize.sync();
-      console.log('📦 Tabelas sincronizadas com sucesso!');
-    }
-
-    // Teste as associações dos modelos
-    Object.values(models).forEach(model => {
-      if (typeof model.associate === 'function') {
-        model.associate(models);
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Erro ao conectar ao banco:', error);
-    // Log mais detalhado em desenvolvimento
-    if (process.env.NODE_ENV === 'development') {
-      console.error('Detalhes do erro:', error.stack);
-    }
+// Inicializa as associações dos modelos
+Object.values(models).forEach(model => {
+  if (typeof model.associate === 'function') {
+    model.associate(models);
   }
-};
-
-// Inicializa o banco de dados
-initializeDatabase();
+});
 
 module.exports = app;
+
