@@ -9,7 +9,8 @@ const sequelize = new Sequelize(databaseUrl, {
     ssl: {
       require: true,
       rejectUnauthorized: false
-    }
+    },
+    keepAlive: true
   },
   pool: {
     max: 2,
@@ -17,11 +18,30 @@ const sequelize = new Sequelize(databaseUrl, {
     acquire: 30000,
     idle: 10000
   },
-  logging: false,
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
   retry: {
     max: 3,
     timeout: 30000
+  },
+  define: {
+    timestamps: true,
+    underscored: true
   }
 });
+
+// Testa a conexão e reconecta se necessário
+const testConnection = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Conexão com o PostgreSQL estabelecida!');
+  } catch (error) {
+    console.error('❌ Erro ao conectar ao banco:', error);
+    // Tenta reconectar em 5 segundos
+    setTimeout(testConnection, 5000);
+  }
+};
+
+// Inicia o teste de conexão
+testConnection();
 
 module.exports = sequelize;

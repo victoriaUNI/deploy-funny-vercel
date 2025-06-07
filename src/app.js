@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const sequelize = require('./database');
 const cors = require('cors');
-const path = require('path');
+const models = require('./models');
 
 // Configuração do CORS
 app.use(cors({
@@ -12,6 +12,7 @@ app.use(cors({
   credentials: true
 }));
 
+// Parse JSON payloads
 app.use(express.json());
 
 // Middleware para tratar erros de JSON inválido
@@ -22,15 +23,8 @@ app.use((err, req, res, next) => {
   next();
 });
 
-// Carregamento dos modelos
-const models = {
-  Crianca: require('./models/Crianca'),
-  Diagnostico: require('./models/Diagnostico'),
-  Atividade: require('./models/Atividade'),
-  Progresso: require('./models/Progresso'),
-  Responsavel: require('./models/Responsavel'),
-  Usuario: require('./models/Usuario')
-};
+// Inicializa os modelos
+models.initializeModels();
 
 // Carregamento das rotas
 app.use('/criancas', require('./routes/criancas'));
@@ -54,6 +48,7 @@ app.get('/', async (req, res) => {
       env: process.env.NODE_ENV
     });
   } catch (error) {
+    console.error('Erro no healthcheck:', error);
     res.status(503).json({
       status: 'error',
       message: '🚨 API está com problemas!',
@@ -62,6 +57,11 @@ app.get('/', async (req, res) => {
       env: process.env.NODE_ENV
     });
   }
+});
+
+// Middleware para tratar rotas não encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Rota não encontrada' });
 });
 
 // Middleware de tratamento de erros
@@ -80,13 +80,6 @@ app.use((err, req, res, next) => {
     error: 'Erro interno do servidor',
     message: process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro interno'
   });
-});
-
-// Inicializa as associações dos modelos
-Object.values(models).forEach(model => {
-  if (typeof model.associate === 'function') {
-    model.associate(models);
-  }
 });
 
 module.exports = app;
