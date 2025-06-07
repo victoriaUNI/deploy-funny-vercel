@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const sequelize = require('./database');
 const cors = require('cors');
+const path = require('path');
 
 // Configuração do CORS
 app.use(cors({
@@ -20,31 +21,45 @@ app.use((err, req, res, next) => {
   next();
 });
 
-const Crianca = require('./models/Crianca');
+// Carregamento dos modelos
+const models = {
+  Crianca: require('./models/Crianca'),
+  Diagnostico: require('./models/Diagnostico'),
+  Atividade: require('./models/Atividade'),
+  Progresso: require('./models/Progresso'),
+  Responsavel: require('./models/Responsavel'),
+  Usuario: require('./models/Usuario')
+};
+
+// Carregamento das rotas
 app.use('/criancas', require('./routes/criancas'));
-
-const Diagnostico = require('./models/Diagnostico');
 app.use('/diagnosticos', require('./routes/diagnosticos'));
-
-const Atividade = require('./models/Atividade');
 app.use('/atividades', require('./routes/atividades'));
-
-const Progresso = require('./models/Progresso');
 app.use('/progresso', require('./routes/progresso'));
-
-const Responsavel = require('./models/Responsavel');
 app.use('/responsaveis', require('./routes/responsaveis'));
-
-const Usuario = require('./models/Usuario');
 app.use('/auth', require('./routes/auth'));
 
+// Rota de healthcheck
 app.get('/', (req, res) => {
-  res.json({ message: '🚀 API está funcionando!' });
+  res.json({ 
+    message: '🚀 API está funcionando!',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
 });
 
 // Middleware de tratamento de erros
 app.use((err, req, res, next) => {
   console.error('Erro na aplicação:', err);
+  
+  // Se for um erro do Sequelize, retorna uma mensagem mais amigável
+  if (err.name === 'SequelizeConnectionError') {
+    return res.status(503).json({
+      error: 'Erro de conexão com o banco de dados',
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+  
   res.status(500).json({ 
     error: 'Erro interno do servidor',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -57,15 +72,25 @@ const initializeDatabase = async () => {
     await sequelize.authenticate();
     console.log('✅ Conexão com o PostgreSQL estabelecida!');
     
-    // Em produção, não vamos sincronizar automaticamente para evitar alterações não intencionais
+    // Em produção, não vamos sincronizar automaticamente
     if (process.env.NODE_ENV !== 'production') {
       await sequelize.sync();
       console.log('📦 Tabelas sincronizadas com sucesso!');
     }
+
+    // Teste as associações dos modelos
+    Object.values(models).forEach(model => {
+      if (typeof model.associate === 'function') {
+        model.associate(models);
+      }
+    });
+
   } catch (error) {
     console.error('❌ Erro ao conectar ao banco:', error);
-    // Não vamos derrubar o servidor em caso de erro de conexão
-    // para permitir que a Vercel continue tentando
+    // Log mais detalhado em desenvolvimento
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Detalhes do erro:', error.stack);
+    }
   }
 };
 

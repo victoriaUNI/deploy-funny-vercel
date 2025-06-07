@@ -11,7 +11,17 @@ const sequelize = new Sequelize(databaseUrl, {
       rejectUnauthorized: false
     }
   },
-  logging: false
+  pool: {
+    max: 2,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+  },
+  logging: false,
+  retry: {
+    max: 3,
+    timeout: 30000
+  }
 });
 
 module.exports = sequelize;
