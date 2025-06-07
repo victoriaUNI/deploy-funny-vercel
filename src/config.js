@@ -6,6 +6,8 @@ module.exports = {
     url: process.env.DATABASE_URL || 'postgresql://autismo_db_ftev_user:9Qyy1dk3jJZgA6cpxpo0hmNmtuS1sbT8@dpg-d129t7buibrs73f0rav0-a/autismo_db_ftev',
     options: {
       dialect: 'postgres',
+      protocol: 'postgres',
+      dialectModule: require('pg'),
       dialectOptions: {
         ssl: {
           require: true,
